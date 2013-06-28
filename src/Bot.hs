@@ -19,6 +19,7 @@ import Control.Concurrent
 import Control.Concurrent.STM.TBChan as C
 import Control.Concurrent.STM (atomically)
 import Control.Monad
+import qualified Control.Exception as X
 import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss.Data.Vector
 import Graphics.Gloss.Geometry.Angle
@@ -92,7 +93,7 @@ botMain (BotEnv host port botname bot runDisplay) =
      poss <- getInitialWorld h
      r <- newMVar (initBotWorld anim poss)
      _ <- forkIO $ botUpdates h cmdChan  r
-     _ <- forkIO $ runBot bot bh cmdChan r
+     _ <- forkIO' $ runBot bot bh cmdChan r
      if runDisplay
          then showGame h r
          else don'tShowGame h r
@@ -131,9 +132,15 @@ initBotWorld anim poss = World vw iw
         , appearance    = anim
         }
 
+forkIO' :: IO () -> IO ThreadId
+forkIO' f = do
+    me <- myThreadId
+    X.catch (forkFinally f (\_ -> X.throwTo me X.ThreadKilled))
+            (\(X.SomeException _) -> exitSuccess)
+
 don'tShowGame :: Handle -> MVar World -> IO ()
 don'tShowGame _h var = do
-    _ <- forkIO $ getChar >> exitSuccess
+    _ <- forkIO' $ getChar >> exitSuccess
     t <- getCurrentTime
     go t
   where
@@ -256,7 +263,8 @@ runBot (BotFile f) h cc var = do
             liftIO $ botLoop botW
   case e of
     Left err -> error (show err)
-    Right _  -> putStrLn "Bot existed normally"
+    Right _  -> putStrLn "Bot exited normally"
+  exitSuccess
 
 updateBotWorld :: Float -> World -> World
 updateBotWorld d (World w inf) = World vw iw
