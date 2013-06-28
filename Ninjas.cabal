@@ -38,7 +38,8 @@ executable Ninjas
                        networked-game,
                        random,
                        hint,
-                       stm-chans, stm
+                       stm-chans, stm,
+                       time
   ghc-options:         -Wall
 
 Library
@@ -63,7 +64,8 @@ Library
                        networked-game,
                        random,
                        hint,
-                       stm-chans, stm, MonadRandom
+                       stm-chans, stm, MonadRandom,
+                       time
   ghc-options:         -Wall
   exposed-modules:     Ninja,
                        Ninja.WhiteBelt,

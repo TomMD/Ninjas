@@ -28,6 +28,7 @@ import Server (ServerEnv(..), defaultServerEnv)
 import NetworkMessages
 import qualified Data.IntMap as IntMap
 import Data.IntMap (IntMap)
+import Data.Time
 import System.Exit (exitSuccess)
 import Data.Data
 import Data.Dynamic
@@ -59,14 +60,16 @@ data BotEnv = BotEnv
   , clientPort :: Int
   , botname    :: String
   , bot        :: Bot
+  , runDisplay :: Bool
   }
 
 defaultBotEnv :: BotEnv
 defaultBotEnv = BotEnv
   { hostname   = "localhost"
-  , clientPort = (serverPort defaultServerEnv)
+  , clientPort = serverPort defaultServerEnv
   , botname    = "[Bot]Anon"
   , bot        = defaultBot
+  , runDisplay = False
   }
 
 data Bot = BotFile FilePath
@@ -76,7 +79,7 @@ defaultBot :: Bot
 defaultBot = BotNoop
 
 botMain :: BotEnv -> IO ()
-botMain (BotEnv host port botname bot) =
+botMain (BotEnv host port botname bot runDisplay) =
   do anim <- Anim.loadWorld
      h <- connectTo host (PortNumber (fromIntegral port))
      hSetBuffering h NoBuffering
@@ -90,7 +93,9 @@ botMain (BotEnv host port botname bot) =
      r <- newMVar (initBotWorld anim poss)
      _ <- forkIO $ botUpdates h cmdChan  r
      _ <- forkIO $ runBot bot bh cmdChan r
-     showGame h r
+     if runDisplay
+         then showGame h r
+         else don'tShowGame h r
 
 serverWaitingMessage :: Int -> String
 serverWaitingMessage n
@@ -125,6 +130,18 @@ initBotWorld anim poss = World vw iw
         , smokeTimers   = []
         , appearance    = anim
         }
+
+don'tShowGame :: Handle -> MVar World -> IO ()
+don'tShowGame _h var = do
+    t <- getCurrentTime
+    go t
+  where
+  go old = do
+    threadDelay (1000000 `div` eventsPerSecond)
+    now <- getCurrentTime
+    let diff = realToFrac (diffUTCTime old now)
+    modifyMVar_ var (return . updateBotWorld diff)
+    go now
 
 showGame :: Handle -> MVar World -> IO ()
 showGame _h var =
@@ -209,7 +226,7 @@ worldOf (Cmd (_,x)) = x
 worldOf (Tick x)    = x
 
 runBot :: Bot -> BotHandle -> TBChan ServerCommand -> MVar World -> IO ()
-runBot (BotNoop)   _ _ _    = return ()
+runBot BotNoop     _ _  _   = return ()
 runBot (BotFile f) h cc var = do
   union <- newTBChanIO 100
   let timer = do

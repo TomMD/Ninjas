@@ -103,7 +103,10 @@ botOpts =
            "User Name"
   , Option [] ["file"]
            (ReqArg (\n env -> env { B.bot = B.BotFile n }) "STRING")
-           "Haskell .hs file with a function bot :: Handle -> MVar World -> IO ()'"
+           "Haskell .hs file describing a Ninja"
+  , Option [] ["runDisplay"]
+           (NoArg (\env -> env { B.runDisplay = True }))
+           "Run a display with this bot"
   ]
 
 getUsername :: IO String

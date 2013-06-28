@@ -40,3 +40,20 @@ Usage
         --server=STRING  Server hostname
         --port=NUM       Server port
         --user=STRING    User Name
+Usage:
+----
+    Ninjas server [FLAGS]
+        --port=NUM    Server port
+        --npcs=NUM    Number of NPCs
+        --smokes=NUM  Number of initial smokebombs
+    Ninjas client [FLAGS] [HOSTNAME [PORT]]
+        --server=STRING  Server hostname
+        --port=NUM       Server port
+        --user=STRING    User Name
+    Ninjas bot    [FLAGS] [HOSTNAME [PORT]]
+        --server=STRING  Server hostname
+        --port=NUM       Server port
+        --user=STRING    User Name
+        --file=STRING    Haskell .hs file describing a Ninja
+        --runDisplay     Run a display with this bot
+
