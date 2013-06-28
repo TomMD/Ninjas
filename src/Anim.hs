@@ -1,4 +1,4 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, DeriveDataTypeable #-}
 module Anim where
 
 import Graphics.Gloss.Data.Picture
@@ -6,7 +6,7 @@ import System.FilePath
 import Control.Exception
 import Paths_Ninjas
 import Prelude hiding(catch)
-
+import Data.Data
 
 defaultFrameDelay :: Float
 defaultFrameDelay = 0.2
@@ -17,7 +17,7 @@ data Animation = Animation
   , moreFrames  :: [Picture]  -- ^ Total number of frames
   , waitFor     :: Float      -- ^ Time until next frame
   , curFrame    :: Picture    -- ^ Current frame
-  }
+  } deriving (Data, Typeable)
 
 loop :: Animation -> Animation
 loop a = a { moreFrames = cycle (moreFrames a) }
@@ -66,6 +66,7 @@ loadAnim path = once defaultFrameDelay `fmap` loadFrames path
 
 
 data NPC = NPC { walk, stay, stun, attack, die :: Animation }
+         deriving (Data, Typeable)
 
 loadNPC :: IO NPC
 loadNPC =
@@ -78,7 +79,7 @@ loadNPC =
 
 
 data World = World { background, tower, smoke :: Animation
-                   , npc :: NPC }
+                   , npc :: NPC } deriving (Data, Typeable)
 
 loadWorld :: IO World
 loadWorld =

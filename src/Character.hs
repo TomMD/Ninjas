@@ -1,8 +1,9 @@
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE RecordWildCards, DeriveDataTypeable #-}
 module Character where
 
 import Graphics.Gloss.Data.Point
 import Graphics.Gloss.Data.Vector
+import Data.Data
 
 import VectorUtils
 import Parameters
@@ -12,7 +13,7 @@ data Character = Character
   , charFacing :: Vector -- Unit vector
   , charState  :: State
   }
-  deriving (Read, Show, Eq)
+  deriving (Read, Show, Eq, Data, Typeable)
 
 data WalkInfo = Walk
   { walkTarget    :: Point
@@ -20,20 +21,20 @@ data WalkInfo = Walk
   , walkDist      :: Float
   , walkVelocity  :: Vector
   }
-  deriving (Show, Read, Eq)
+  deriving (Show, Read, Eq, Data, Typeable)
 
 data WaitInfo = Wait
   { waitWaiting :: Maybe Float
   , waitStunned :: Bool
   }
-  deriving (Show, Read, Eq)
+  deriving (Show, Read, Eq, Data, Typeable)
 
 data State
   = Walking WalkInfo
   | Waiting WaitInfo
   | Dead
   | Attacking Float
-  deriving (Show, Read, Eq)
+  deriving (Show, Read, Eq, Data, Typeable)
 
 data ThinkTask = ChooseWait | ChooseDestination
 
