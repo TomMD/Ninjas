@@ -29,13 +29,15 @@ mapPlayerCharacter :: (Character -> Character) -> Player -> Player
 mapPlayerCharacter f p = p { playerCharacter = f (playerCharacter p) }
 
 canHitPoint :: Character -> Point -> Bool
-canHitPoint char pt = inRange && inFront
+canHitPoint char pt = inRange && (inFront || onTop)
   where
   inRange = attackLen <= attackDistance
 
   -- u·v = ❘v❘ ❘u❘ cos Θ
   inFront = cos attackAngle * attackLen
          <= charFacing char `dotV` attackVector
+
+  onTop = charPos char == pt
 
   attackVector   = subPt pt (charPos char)
   attackLen      = magV attackVector
