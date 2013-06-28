@@ -92,7 +92,7 @@ botMain (BotEnv host port botname bot runDisplay) =
 
      poss <- getInitialWorld h
      r <- newMVar (initBotWorld anim poss)
-     _ <- forkIO $ botUpdates h cmdChan  r
+     _ <- forkIO  $ botUpdates h cmdChan  r
      _ <- forkIO' $ runBot bot bh cmdChan r
      if runDisplay
          then showGame h r
@@ -135,12 +135,16 @@ initBotWorld anim poss = World vw iw
 forkIO' :: IO () -> IO ThreadId
 forkIO' f = do
     me <- myThreadId
-    X.catch (forkFinally f (\_ -> X.throwTo me X.ThreadKilled))
+    X.catch (forkFinally f (\e -> print e >> X.throwTo me X.ThreadKilled))
             (\(X.SomeException _) -> exitSuccess)
 
 don'tShowGame :: Handle -> MVar World -> IO ()
 don'tShowGame _h var = do
-    _ <- forkIO' $ getChar >> exitSuccess
+    let quitter = do
+            c <- getChar
+            when (c == 'q' || c == 'Q') exitSuccess
+            quitter
+    _ <- forkIO' quitter
     t <- getCurrentTime
     go t
   where
@@ -261,10 +265,10 @@ runBot (BotFile f) h cc var = do
                  botW' <- func h tick botWorld
                  botLoop botW'
             liftIO $ botLoop botW
+  putStrLn "Bot interpreter exited"
   case e of
     Left err -> error (show err)
     Right _  -> putStrLn "Bot exited normally"
-  exitSuccess
 
 updateBotWorld :: Float -> World -> World
 updateBotWorld d (World w inf) = World vw iw
