@@ -133,13 +133,14 @@ initBotWorld anim poss = World vw iw
 
 don'tShowGame :: Handle -> MVar World -> IO ()
 don'tShowGame _h var = do
+    _ <- forkIO $ getChar >> exitSuccess
     t <- getCurrentTime
     go t
   where
   go old = do
     threadDelay (1000000 `div` eventsPerSecond)
     now <- getCurrentTime
-    let diff = realToFrac (diffUTCTime old now)
+    let diff = realToFrac (diffUTCTime now old)
     modifyMVar_ var (return . updateBotWorld diff)
     go now
 
