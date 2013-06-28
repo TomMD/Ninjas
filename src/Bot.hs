@@ -135,8 +135,7 @@ initBotWorld anim poss = World vw iw
 forkIO' :: IO () -> IO ThreadId
 forkIO' f = do
     me <- myThreadId
-    X.catch (forkFinally f (\e -> print e >> X.throwTo me X.ThreadKilled))
-            (\(X.SomeException _) -> exitSuccess)
+    forkFinally f (\e -> print e >> X.throwTo me X.ThreadKilled)
 
 don'tShowGame :: Handle -> MVar World -> IO ()
 don'tShowGame _h var = do
