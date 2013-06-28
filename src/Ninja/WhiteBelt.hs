@@ -1,4 +1,4 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, TupleSections #-}
 -- | White belts are able to use basic logical to
 -- indicate when to attack and where to move.  Due to lack of training,
 -- they don't pay attention to deals, like if their target is already
@@ -24,6 +24,7 @@ import Graphics.Gloss.Data.Vector (magV, dotV, argV, unitVectorAtAngle)
 import Graphics.Gloss.Data.Point
 import Data.List
 import Data.Ord
+import Data.Maybe
 import Data.Data
 
 data MoveOp
@@ -34,6 +35,7 @@ data MoveOp
     | RandomWalk   -- ^ Walk somewhere random
     | Strike       -- ^ Swing your sword!
     | Continue     -- ^ Do nothing different
+    deriving (Eq, Ord, Show, Read, Enum)
 
 evalMove :: BotHandle -> Int -> [Point] -> InfoWorld -> MoveOp -> IO ()
 evalMove bh _ _ _ Halt = stop bh
@@ -67,11 +69,11 @@ data Cond = EnemyInReach        -- ^ Closest enemy within striking range
           | EnemyBackTurned     -- ^ Closest enemy is facing away from you
           | EnemyBehind         -- ^ Closest enemy is behind you
           | EnemyInFront        -- ^ Closest enemy is infront of you
-          -- | JustStruck          -- ^ You have _just_ struck at an enemy
           | Stopped             -- ^ You are stopped
           | CondRandom Float    -- ^ Randomly with a probability (0-1)
           | AND Cond Cond
           | OR Cond Cond
+          deriving (Eq, Ord, Show, Read)
 
 consideringClosest :: (Character -> Character -> Bool) -> Int -> InfoWorld -> Bool
 consideringClosest f self w =
@@ -91,13 +93,16 @@ evalCond self w (OR a b) = do
     bE <- e b
     return (aE || bE)
 evalCond self w EnemyInReach =
-    return $ consideringClosest (\n me -> n `S.canHitPoint` charPos me) self w
+    let f n me =
+            let np = charPos n
+                mp = charPos me
+            in magV (subPt np mp) <= attackDistance
+    in return $ consideringClosest f self w
 
 evalCond self w EnemyFacing = return $ consideringClosest facing self w
 evalCond self w EnemyBackTurned = not `fmap` evalCond self w EnemyFacing
 evalCond self w EnemyBehind  = not `fmap` evalCond self w EnemyInFront
 evalCond self w EnemyInFront = return $ consideringClosest (flip facing) self w
--- evalCond self w JustStruck = not implemented
 evalCond self w Stopped = do
     let me = getSelf self w
     return $ case charState me of
@@ -109,16 +114,22 @@ evalCond _ _ (CondRandom p) = do
 
 -- @a `facing` b@ is True iff @b@ is in the attack angle of @a@.
 facing :: Character -> Character -> Bool
-facing a b = cos attackAngle <= charFacing a `dotV`
-             subPt (charPos b) (charPos a)
+facing a b = front || top
+  where
+  top   = charPos a == charPos b
+  front = cos attackAngle * attackLen
+       <= charFacing a `dotV` attackVector
+
+  attackVector = subPt (charPos b) (charPos a)
+  attackLen    = magV attackVector
 
 getSelf :: Int -> InfoWorld -> Character
-getSelf k w = maybe (error "Self not found") id
-                            (IntMap.lookup k (everyone w))
+getSelf k w = fromMaybe (error "Self not found")
+                        (IntMap.lookup k (infoCharacters w))
 
 getClosestEnemy :: Int -> InfoWorld -> Maybe Character
 getClosestEnemy me w =
-    let self        = getSelf me w
+    let self      = getSelf me w
         dist targ = distance (charPos targ) (charPos self)
     in minimumMayBy (comparing dist)
        . IntMap.elems . everyoneElse me $ w
@@ -130,8 +141,14 @@ minimumMayBy :: (a -> a -> Ordering) -> [a] -> Maybe a
 minimumMayBy _ [] = Nothing
 minimumMayBy f xs = Just (minimumBy f xs)
 
+-- Get everyone who isn't dead or currently stunned
 everyone :: InfoWorld -> IntMap Character
-everyone = infoCharacters
+everyone = IntMap.filter (\c -> (not . (== Dead) . charState $ c)
+                             && (not . isStunned) c)
+         . infoCharacters
+  where
+      isStunned (Character _ _ (Waiting i)) = waitStunned i
+      isStunned _ = False
 
 everyoneElse :: Int -> InfoWorld -> IntMap Character
 everyoneElse me = IntMap.filterWithKey (\k _ -> k /= me) . everyone
@@ -154,19 +171,15 @@ whiteBelt conds bh be stance = do
   w = worldOf be
 
   kata :: Int -> [Point] -> IO ()
-  kata self cs = go self cs conds
-
-  go :: Int -> [Point] -> [(Cond,MoveOp)] -> IO ()
-  go _ _    []     = return ()
-  go self remPillars ((c,m):cs) = do
+  kata self remPillars = do
     g <- newStdGen
-    if evalRand (evalCond self w c) g
-        then evalMove bh self remPillars w m
-        else go self remPillars cs
+    let cs  = evalRand (mapM (evalCond self w . fst) conds) g
+        ops = zip cs (map snd conds)
+    let rs = [o | (c,o) <- ops, c]
+    maybe (return ()) (evalMove bh self remPillars w) (listToMaybe rs)
 
 -- |By issuing a random initial move we can identify ourselves with very
 -- high probability.
-
 identifySelf :: BotHandle -> BotEvent -> Dynamic -> IO Horse
 identifySelf bh be dyn =
     case fromDyn dyn Init of
