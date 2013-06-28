@@ -27,16 +27,16 @@ import Data.Ord
 import Data.Data
 
 data MoveOp
-    = Stop         -- ^ Stay still
+    = Halt         -- ^ Stay still
     | AvoidEnemy   -- ^ Walk away from the closest person
     | TowardEnemy  -- ^ Walk toward the closest person
     | ToCastle     -- ^ Walk toward the closest castle
     | RandomWalk   -- ^ Walk somewhere random
-    | Attack       -- ^ Swing your sword!
+    | Strike       -- ^ Swing your sword!
     | Continue     -- ^ Do nothing different
 
 evalMove :: BotHandle -> Int -> [Point] -> InfoWorld -> MoveOp -> IO ()
-evalMove bh _ _ _ Stop = stop bh
+evalMove bh _ _ _ Halt = stop bh
 evalMove bh self _ w AvoidEnemy  = do
     let nme  = getClosestEnemy self w
     case nme of
@@ -59,7 +59,7 @@ evalMove bh _ _ _ RandomWalk  = do
     y <- randomRIO (snd boardMin, snd boardMax)
     let dst = (x,y)
     move bh dst
-evalMove bh _ _ _ Attack = attack bh
+evalMove bh _ _ _ Strike = attack bh
 evalMove _  _ _ _ Continue = return ()
 
 data Cond = EnemyInReach        -- ^ Closest enemy within striking range

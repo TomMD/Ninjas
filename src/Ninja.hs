@@ -38,16 +38,19 @@
 -- -- FIXME redbelt example
 -- @
 --
--- To obtain become a ninja there must be no aspect of the battle that
--- is omitted.  All sights, sounds, and knowledge must be used to master
--- ones enemies.
+-- To become a ninja there must be no aspect of the battle that is
+-- omitted.  All sights, sounds, and knowledge must be used to defeat
+-- your enemies.
 module Ninja
     (
     -- * Types
     -- ** Basic
     Ninja, Stance,
     -- ** Advanced
-    InfoWorld(..), BotEvent(..), BotHandle,
+    -- *** Triggers
+    BotEvent(..), ServerCommand(..), Command (..), BotHandle,
+    -- *** World data
+    InfoWorld(..),
     ClientCharacter(..), Character(..), State(..),
     WalkInfo(..), WaitInfo(..),
     -- * World Queries
@@ -60,6 +63,7 @@ module Ninja
 
 import Parameters
 import Data.Dynamic
+import NetworkMessages (ServerCommand(..), Command(..))
 import Bot
 
 type Stance = Dynamic
