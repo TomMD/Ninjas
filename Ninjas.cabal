@@ -26,6 +26,7 @@ executable Ninjas
                        Server,
                        Simulation,
                        Bot
+                       VectorUtils
   hs-source-dirs:      src
   build-depends:
                        base,
